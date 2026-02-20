@@ -1,0 +1,13 @@
+# Kconfig for Galaxycore GC9D01 round LCD driver
+# SPDX-License-Identifier: Apache-2.0
+
+config GC9D01
+	bool "Galaxycore GC9D01 driver"
+	default y
+	depends on DT_HAS_GALAXYCORE_GC9D01_ENABLED
+	select MIPI_DBI
+	select SPI
+	help
+	  Enable driver for the Galaxycore GC9D01 display controller.
+	  Validated for the Waveshare 0.71inch round LCD (160x160, BOE panel).
+	  Uses the Zephyr MIPI DBI SPI 4-wire interface.

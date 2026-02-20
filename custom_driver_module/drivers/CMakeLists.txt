@@ -1,0 +1,4 @@
+# custom_driver_module/drivers/CMakeLists.txt
+
+add_subdirectory_ifdef(CONFIG_POT_MCP41XXX mcp41xxx)
+add_subdirectory_ifdef(CONFIG_GC9D01 display)

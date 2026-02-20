@@ -1,0 +1,17 @@
+# Kconfig for Microchip MCP41XXX series
+#
+# Copyright (c) 2025 (Seu Nome)
+# SPDX-License-Identifier: Apache-2.0
+
+config POT_MCP41XXX
+    bool "Microchip MCP41XXX SPI Digital Potentiometer"
+    default y
+    # Esta linha faz o driver ser habilitado automaticamente
+    # se o devicetree (overlay) encontrar o 'compatible = "microchip,mcp41xxx"'
+    depends on DT_HAS_MICROCHIP_MCP41XXX_ENABLED
+    # O driver precisa da API de SPI para funcionar
+    select SPI
+    help
+      Enable the custom driver for the MCP41XXX series (MCP41010, MCP41050, MCP41100).
+
+

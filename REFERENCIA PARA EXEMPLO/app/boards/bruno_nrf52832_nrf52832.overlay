@@ -1,0 +1,101 @@
+/*
+ * OLED SPI - SSD1331 96x64 (colorido RGB)
+ * Compatible: "solomon,ssd1331"
+ * Uses MIPI DBI (SPI mode) interface
+ */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/mipi_dbi/mipi_dbi.h>
+
+/ {
+	aliases {
+		accel0 = &fxos8700;
+	};
+
+	chosen {
+		zephyr,display = &ssd1331;
+	};
+
+	mipi_dbi {
+		compatible = "zephyr,mipi-dbi-spi";
+		status = "okay";
+		spi-dev = <&spi1>;
+		dc-gpios = <&gpio0 20 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio0 22 GPIO_ACTIVE_LOW>;
+		write-only;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		ssd1331: ssd1331@0 {
+			compatible = "solomon,ssd1331";
+			reg = <0>;
+			mipi-max-frequency = <8000000>;
+			mipi-mode = "MIPI_DBI_MODE_SPI_4WIRE";
+			width = <96>;
+			height = <64>;
+			display-offset = <0>;
+			start-line = <0>;
+			multiplex-ratio = <63>;
+			phase-length = <0x31>;
+			oscillator-freq = <0xF0>;
+			precharge-time-a = <0x64>;
+			precharge-time-b = <0x78>;
+			precharge-time-c = <0x64>;
+			precharge-voltage = <0x3A>;
+			vcomh-voltage = <0x3E>;
+			current-att = <0x0F>;
+			remap-value = <0x72>;
+		};
+	};
+};
+
+/* I2C0 habilitado para o FXOS8700CQ */
+/* &i2c0 { status = "disabled"; }; */
+&i2c1 { status = "disabled"; };
+&spi0 { status = "disabled"; };
+&adc  { status = "disabled"; };
+
+&spi1 {
+    compatible = "nordic,nrf-spim";
+    status = "okay";
+
+    #address-cells = <1>;
+    #size-cells = <0>;
+
+    cs-gpios = <&gpio0 19 GPIO_ACTIVE_LOW>;
+
+    pinctrl-0 = <&spi1_default>;
+    pinctrl-1 = <&spi1_sleep>;
+    pinctrl-names = "default", "sleep";
+};
+
+&i2c0 {
+    compatible = "nordic,nrf-twim";
+    status = "okay";
+    clock-frequency = <I2C_BITRATE_STANDARD>;
+
+    fxos8700: fxos8700@1e {
+        compatible = "nxp,fxos8700";
+        reg = <0x1e>;
+        range = <2>;
+    };
+};
+
+&pinctrl {
+    spi1_default: spi1_default {
+        group1 {
+            psels = <NRF_PSEL(SPIM_SCK,  0, 11)>,
+                    <NRF_PSEL(SPIM_MOSI, 0, 12)>,
+                    <NRF_PSEL(SPIM_MISO, 0, 13)>;
+        };
+    };
+
+    spi1_sleep: spi1_sleep {
+        group1 {
+            psels = <NRF_PSEL(SPIM_SCK,  0, 11)>,
+                    <NRF_PSEL(SPIM_MOSI, 0, 12)>,
+                    <NRF_PSEL(SPIM_MISO, 0, 13)>;
+            low-power-enable;
+        };
+    };
+};

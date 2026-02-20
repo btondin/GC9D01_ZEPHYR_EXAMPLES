@@ -1,0 +1,26 @@
+# Copyright (c) 2025 (Seu Nome)
+# SPDX-License-Identifier: Apache-2.0
+description: |
+  Microchip MCP41XXX (MCP41010, MCP41050, MCP41100)
+  Single-Tap SPI Digital Potentiometer.
+
+# O 'compatible' que você usará no seu overlay
+compatible: "microchip,mcp41xxx"
+
+# É um dispositivo SPI, então incluímos as definições padrão de SPI
+include: spi-device.yaml
+
+on-bus: spi
+
+
+properties:
+  resistance:
+    type: int
+    required: true
+    description: |
+      A resistência total (R-ab) do potenciômetro digital em kOhms (kilo-ohms).
+      O driver usa isso para calcular o valor do "tap".
+    enum:
+      - 10   # (Para o MCP41010 - 10 kOhm)
+      - 50   # (Para o MCP41050 - 50 kOhm)
+      - 100  # (Para o MCP41100 - 100 kOhm)

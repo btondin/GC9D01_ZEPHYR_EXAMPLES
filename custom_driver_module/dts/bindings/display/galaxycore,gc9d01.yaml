@@ -1,0 +1,99 @@
+# Copyright (c) 2025
+# SPDX-License-Identifier: Apache-2.0
+
+title: Galaxycore GC9D01 round LCD display driver
+
+description: |
+  GC9D01 display controller via MIPI DBI SPI 4-wire interface.
+  Validated for Waveshare 0.71inch Round LCD (160x160, BOE panel).
+
+  Binding mirrors galaxycore,gc9x01x.yaml exactly.
+  Defaults reflect the Waveshare BOE 0.71" init sequence.
+
+  Example overlay:
+
+    &mipi_dbi {
+        compatible = "zephyr,mipi-dbi-spi";
+        spi-dev = <&spi1>;
+        dc-gpios    = <&gpio0 20 GPIO_ACTIVE_HIGH>;
+        reset-gpios = <&gpio0 22 GPIO_ACTIVE_LOW>;
+        write-only;
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        gc9d01: gc9d01@0 {
+            compatible = "galaxycore,gc9d01";
+            reg = <0>;
+            mipi-max-frequency = <8000000>;
+            pixel-format = <PANEL_PIXEL_FORMAT_RGB_565>;
+            width  = <160>;
+            height = <160>;
+            display-inversion;
+        };
+    };
+
+compatible: "galaxycore,gc9d01"
+
+include: [mipi-dbi-spi-device.yaml, display-controller.yaml, lcd-controller.yaml]
+
+properties:
+  orientation:
+    type: string
+    default: "normal"
+    enum:
+      - "normal"
+      - "90"
+      - "180"
+      - "270"
+    description: Display orientation (CW) in degrees.
+
+  display-inversion:
+    type: boolean
+    description: |
+      Display inversion mode. Required for correct colours on the
+      Waveshare BOE 0.71" panel.
+
+  pwrctrl1:
+    type: uint8-array
+    default: [0x00]
+    description: Power-control 1 register value (0xC1).
+
+  pwrctrl2:
+    type: uint8-array
+    default: [0x19]
+    description: Power-control 2 register value (0xC3). BOE default 0x19.
+
+  pwrctrl3:
+    type: uint8-array
+    default: [0x19]
+    description: Power-control 3 register value (0xC4). BOE default 0x19.
+
+  pwrctrl4:
+    type: uint8-array
+    default: [0x3C]
+    description: Power-control 4 register value (0xC9). BOE default 0x3C.
+
+  gamma1:
+    type: uint8-array
+    default: [0x53, 0x15, 0x0A, 0x04, 0x00, 0x3E]
+    description: Gamma correction 1 register values (0xF0). BOE defaults.
+
+  gamma2:
+    type: uint8-array
+    default: [0x56, 0xA8, 0x7F, 0x33, 0x34, 0x5F]
+    description: Gamma correction 2 register values (0xF1). BOE defaults.
+
+  gamma3:
+    type: uint8-array
+    default: [0x53, 0x15, 0x0A, 0x04, 0x00, 0x3A]
+    description: Gamma correction 3 register values (0xF2). BOE defaults.
+
+  gamma4:
+    type: uint8-array
+    default: [0x52, 0xA4, 0x7F, 0x33, 0x34, 0xDF]
+    description: Gamma correction 4 register values (0xF3). BOE defaults.
+
+  framerate:
+    type: uint8-array
+    default: [0x34]
+    description: Frame rate register value (0xE8).

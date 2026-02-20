@@ -1,0 +1,6 @@
+# custom_driver_module/drivers/Kconfig
+
+menu "Drivers"
+rsource "mcp41xxx/Kconfig.mcp41xxx"
+rsource "display/Kconfig.gc9d01"
+endmenu
