@@ -155,8 +155,7 @@ GC9D01_ZEPHYR_EXAMPLES/
 │   ├── CMakeLists.txt
 │   ├── Kconfig
 │   └── prj.conf
-├── custom_driver_module/        # Out-of-tree GC9D01 Zephyr driver
-└── REFS_ARDUINO/                # Original Arduino reference sketches
+└── custom_driver_module/        # Out-of-tree GC9D01 Zephyr driver
 ```
 
 ---
