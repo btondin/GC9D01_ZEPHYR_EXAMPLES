@@ -43,7 +43,7 @@ LOG_MODULE_REGISTER(eye_renderer, CONFIG_LOG_DEFAULT_LEVEL);
 #define EYE_1_XPOSITION   20        /* x offset on 160-wide display      */
 #define EYE_Y_OFFSET      ((160 - SCREEN_HEIGHT) / 2) /* center vertically */
 
-#define AUTOBLINK                   /* autonomous blinking                */
+//#define AUTOBLINK                   /* autonomous blinking                */
 #define TRACKING                    /* upper eyelid tracks pupil          */
 
 #define IRIS_MIN          90        /* iris size — smallest (bright light) */
@@ -198,22 +198,13 @@ static void draw_eye(uint32_t iScale,
             }
 
             /*
-             * Convert eye-data pixel to LVGL canvas format.
-             *
-             * Arduino pbuffer[..] = (px_rb_swapped >> 8) | (px_rb_swapped << 8)
-             * LVGL with LV_COLOR_16_SWAP=y stores bytes pre-swapped so the
-             * SPIM DMA sends them in the correct order.
-             * Writing the same value as Arduino's pbuffer yields identical
-             * display output.
+             * Eye data tables are RGB565 (R in bits [15:11]).
+             * LVGL with LV_COLOR_FORMAT_RGB565 canvas + LV_COLOR_16_SWAP=y
+             * applies the byte swap automatically during canvas→VDB
+             * compositing, so the SPIM DMA sends the high byte (R+G) first
+             * as the GC9D01 expects. No manual transformation needed.
              */
-            uint16_t px = (uint16_t)p;
-            /* Step 1: R↔B channel swap */
-            px = (uint16_t)(((px & 0xF800u) >> 11) |
-                            (px  & 0x07E0u)         |
-                            ((px & 0x001Fu) << 11));
-            /* Step 2: byte swap */
-            canvas_buf[screenY * CANVAS_W + screenX] =
-                (uint16_t)((px >> 8) | (px << 8));
+            canvas_buf[screenY * CANVAS_W + screenX] = (uint16_t)p;
         }
     }
 
