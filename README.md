@@ -68,12 +68,6 @@ Building and Flashing
     west build -b bruno_nrf52832/nrf52832
     west flash
 
-Other Displays
-**************
-
-This repository has one branch per display configuration.
-See all available branches at the
-`repository page <https://github.com/btondin/LVGL_AULA>`_.
 
 License
 *******
