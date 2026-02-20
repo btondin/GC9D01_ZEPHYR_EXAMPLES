@@ -1,7 +1,12 @@
 /*
- * Round TFT LCD - GC9D01 160x160 0.71" (Waveshare BOE)
- * Compatible: "galaxycore,gc9d01"  (custom driver no custom_driver_module)
- * Uses MIPI DBI (SPI mode) interface
+ * Device Tree Overlay — Bruno nRF52832 Board
+ *
+ * Configures the hardware peripherals used by the accelerometer chart demo:
+ *   - GC9D01 160×160 round TFT display via SPI1 (MIPI DBI Type-C)
+ *   - FXOS8700CQ 6-axis accelerometer/magnetometer via I2C0
+ *
+ * Peripherals not used by this application (I2C1, SPI0, ADC) are explicitly
+ * disabled to reduce power consumption and avoid resource conflicts.
  */
 
 #include <zephyr/dt-bindings/gpio/gpio.h>
@@ -9,14 +14,39 @@
 #include <zephyr/dt-bindings/display/panel.h>
 
 / {
+	/*
+	 * aliases: shorthand node references used by application code via
+	 * DT_ALIAS(). accel0 maps to the FXOS8700CQ node so main.c can
+	 * retrieve the sensor device without hard-coding the full node path.
+	 */
 	aliases {
 		accel0 = &fxos8700;
 	};
 
+	/*
+	 * chosen: board-level selections consumed by Zephyr subsystems.
+	 * zephyr,display tells the LVGL/display subsystem which device to use
+	 * as the primary framebuffer output.
+	 */
 	chosen {
 		zephyr,display = &gc9d01;
 	};
 
+	/*
+	 * mipi_dbi: MIPI DBI Type-C (4-wire SPI) virtual bus controller.
+	 *
+	 * Bridges the Zephyr MIPI DBI display API to the physical SPI1
+	 * peripheral. The dc-gpios and reset-gpios lines are mandatory for
+	 * all MIPI DBI SPI displays.
+	 * write-only: disables MISO since the GC9D01 is a TX-only display.
+	 *
+	 * Pin assignments (Bruno nRF52832 board):
+	 *   DC    → P0.20  (Data/Command select, active HIGH)
+	 *   RESET → P0.22  (Hardware reset,      active LOW)
+	 *   CS    → P0.19  (Chip Select, defined in &spi1 cs-gpios, active LOW)
+	 *   SCK   → P0.11  (SPI clock,   defined in pinctrl below)
+	 *   MOSI  → P0.12  (SPI data to display, defined in pinctrl below)
+	 */
 	mipi_dbi {
 		compatible = "zephyr,mipi-dbi-spi";
 		status = "okay";
@@ -27,24 +57,47 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
+		/*
+		 * gc9d01: GalaxyCore GC9D01 display controller.
+		 *
+		 * 160×160 round TFT LCD (0.71", Waveshare BOE panel).
+		 * Pixel format is RGB565 (16-bit) to match the LVGL color depth
+		 * configured in prj.conf (CONFIG_LV_COLOR_DEPTH_16).
+		 *
+		 * mipi-max-frequency: set to 40 MHz (GC9D01 datasheet maximum).
+		 * The nRF52832 SPIM hardware caps at 8 MHz, so the SPI peripheral
+		 * will automatically clamp the clock to 8 MHz at runtime.
+		 *
+		 * display-inversion: commented out — not required for this BOE
+		 * panel revision. Enable if colors appear inverted on other panel
+		 * batches or if using a different manufacturer's IPS variant.
+		 */
 		gc9d01: gc9d01@0 {
 			compatible = "galaxycore,gc9d01";
 			reg = <0>;
-			mipi-max-frequency = <40000000>; /* nRF52832 SPIM max = 8 MHz */
+			mipi-max-frequency = <40000000>;
 			pixel-format = <PANEL_PIXEL_FORMAT_RGB_565>;
 			width = <160>;
 			height = <160>;
-			//display-inversion; /* cores corretas no BOE panel */
+			//display-inversion; /* enable if colors appear inverted */
 		};
 	};
 };
 
-/* I2C0 habilitado para o FXOS8700CQ */
-/* &i2c0 { status = "disabled"; }; */
-&i2c1 { status = "disabled"; };
-&spi0 { status = "disabled"; };
-&adc  { status = "disabled"; };
+/* --- Disable unused peripherals to save power and avoid resource conflicts --- */
+&i2c1 { status = "disabled"; }; /* I2C1: not used in this application       */
+&spi0  { status = "disabled"; }; /* SPI0: not used (display is on SPI1)      */
+&adc   { status = "disabled"; }; /* ADC:  not required by this application   */
 
+/*
+ * spi1: SPI master used by the GC9D01 display via the mipi_dbi controller.
+ *
+ * Uses the Nordic nRF SPIM (EasyDMA-capable SPI master) driver for efficient
+ * DMA-based framebuffer transfers without CPU copying overhead.
+ *
+ * cs-gpios: Chip Select for the display (SPI address 0) → P0.19, active LOW.
+ * pinctrl-0 / pinctrl-1: active and sleep pin function states (see &pinctrl).
+ */
 &spi1 {
     compatible = "nordic,nrf-spim";
     status = "okay";
@@ -59,6 +112,17 @@
     pinctrl-names = "default", "sleep";
 };
 
+/*
+ * i2c0: I2C master used by the FXOS8700CQ accelerometer/magnetometer.
+ *
+ * Standard 100 kHz (I2C_BITRATE_STANDARD) clock — sufficient for the
+ * FXOS8700CQ's maximum output data rate used in this demo.
+ * The sensor SA0 pin is pulled LOW on this board, placing the device
+ * at I2C address 0x1E.
+ *
+ * range = <2>: configures the accelerometer full-scale range to ±2 G,
+ * which matches the chart Y-axis range defined in main.c (±2000 units).
+ */
 &i2c0 {
     compatible = "nordic,nrf-twim";
     status = "okay";
@@ -66,11 +130,22 @@
 
     fxos8700: fxos8700@1e {
         compatible = "nxp,fxos8700";
-        reg = <0x1e>;
-        range = <2>;
+        reg = <0x1e>;  /* I2C address: SA0=LOW → 0x1E */
+        range = <2>;   /* Full-scale range: ±2 G       */
     };
 };
 
+/*
+ * pinctrl: Pin multiplexer configuration for SPI1.
+ *
+ * spi1_default: active-state pin functions assigned to SPI1.
+ *   SCK  → P0.11  SPI clock output
+ *   MOSI → P0.12  SPI data output to display
+ *   MISO → P0.13  SPI data input (unused — display is write-only)
+ *
+ * spi1_sleep: low-power pin state entered when the SPI peripheral is idle.
+ *   Same pins, low-power-enable set to minimize leakage current during sleep.
+ */
 &pinctrl {
     spi1_default: spi1_default {
         group1 {
